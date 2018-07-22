@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const promisify = require('util').promisify;
+const read = promisify(fs.readFile);
+const statAsync = promisify(fs.stat);
 
 /**
  * 读取文件操作
@@ -8,9 +10,9 @@ const promisify = require('util').promisify;
  * @param encoding
  * @returns {Promise<void>}
  */
-const readFile = (path, encoding = 'utf-8') => {
+const readFile = async (path, encoding = 'utf-8') => {
   try {
-    const res = fs.readdirSync(path, { encoding });
+    const res = await read(path, { encoding });
     return res;
   } catch (e) {
     throw new Error(`An error occurred while the ${path} file was being read---${e}`);
@@ -35,29 +37,29 @@ const readAllDir = path => {
 
 /**
  * 读取某路径下面所有特定扩展名所有文件
- * @param dir
- * @param extName 文件扩展名 传递 * 表示返回所有读取到的文件
+ * @param dirArr
+ * @param fileType 传递 * 表示返回所有读取到的文件
  * @returns {Promise<Array>}
  */
-let readAllFile = (dir, extName) => {
-  if (!extName) throw new Error('extName is not defined');
+let readAllFile = async (dirArr, fileType) => {
+  if (!fileType) throw new Error('fileType is not defined');
   const fileList = [];
-  const dirArr = readAllDir(dir);
-  readAllFile = dirArr => {
+  readAllFile = async dirArr => {
     for (let i of dirArr) {
       try {
-        const stat = fs.statSync(i);
-        if (stat.isDirectory()) { readAllFile(readAllDir(i)) }
+        const stat = await statAsync(i);
+        if (stat.isDirectory()) { await readAllFile(readAllDir(i)) }
         else {
-          extName === '*' ? fileList[fileList.length] = i
-            : path.extname(i) === `.${extName}` ? fileList[fileList.length] = i : '';
+          if (fileType === '*') { fileList[fileList.length] = i }
+          else path.extname(i) === `.${fileType}` ? fileList[fileList.length] = i : '';
         }
       } catch (e) {
         throw e;
       }
     }
   };
-  readAllFile(dirArr);
+  await readAllFile(dirArr);
+  console.log(fileList);
   return fileList;
 };
 module.exports = {
